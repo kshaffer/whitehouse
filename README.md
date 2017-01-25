@@ -15,3 +15,9 @@ Once you've downloaded your archives, move all the html files to their own folde
 Then open ```make_the_soup.py``` and update the ```source_folder``` and ```output_file``` variables, if necessary.
 
 Finally, run ```python make_the_soup.py``` to convert all of the downloaded html data into a single CSV file you can use for data analysis.
+
+## files
+
+```make_the_soup.py``` is a Python script that takes downloaded html files, parses them for page title and content (looks for sections with id='page', the current format for whitehouse.gov pages), and saves them in a single CSV file with a single record for each page.
+
+```trump-20170125.csv``` is an example output, based on a download of whitehouse.gov on January 25, 2017.
