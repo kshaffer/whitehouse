@@ -1,3 +1,4 @@
+
 from bs4 import BeautifulSoup
 from bs4 import UnicodeDammit
 import fnmatch
@@ -29,6 +30,7 @@ def articleRow(filename):
     return(row)
 
 data_to_write = []
+data_to_write.append(['title', 'text'])
 
 for file in corpus:
     data_to_write.append(articleRow(file))
