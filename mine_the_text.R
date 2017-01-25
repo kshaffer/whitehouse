@@ -61,6 +61,10 @@ tidy_trump %>%
   ggtitle('Most common words on whitehouse.gov on January 25, 2017') +
   coord_flip()
 
+word_count <- tidy_trump %>%
+  count(word, sort = TRUE) %>%
+  mutate(word = reorder(word, n))
+
 # unnest trump whitehouse.gov corpus by bigram, remove stop words
 tidy_trump_bigrams <- trump %>%
   unnest_tokens(bigram, text, token = 'ngrams', n = 2) %>%
@@ -81,6 +85,10 @@ tidy_trump_bigrams %>%
   ylab('count') +
   ggtitle('Most common bigrams on whitehouse.gov on January 25, 2017') +
   coord_flip()
+
+bigram_count <- tidy_trump_bigrams %>%
+  count(bigram, sort = TRUE) %>%
+  mutate(bigram = reorder(bigram, n))
 
 # unnest trump whitehouse.gov corpus by trigram, remove stop words
 tidy_trump_trigram <- trump %>%
@@ -103,3 +111,7 @@ tidy_trump_trigram %>%
   ylab('count') +
   ggtitle('Most common trigrams on whitehouse.gov on January 25, 2017') +
   coord_flip()
+
+trigram_count <- tidy_trump_trigram %>%
+  count(trigram, sort = TRUE) %>%
+  mutate(trigram = reorder(trigram, n))
