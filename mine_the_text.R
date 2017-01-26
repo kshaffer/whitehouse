@@ -115,3 +115,151 @@ tidy_trump_trigram %>%
 trigram_count <- tidy_trump_trigram %>%
   count(trigram, sort = TRUE) %>%
   mutate(trigram = reorder(trigram, n))
+
+# compare to a corpus of trump campaign speeches (in a separate repository)
+tidy_wh <- tidy_trump
+
+speeches <- read_file('../trump_speeches/data/full_speech.txt')
+speeches <- as_tibble(cbind(source = 'trump_speeches', text = speeches))
+tidy_speeches <- speeches %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+trump_talk <- bind_rows(tidy_wh %>% 
+                          mutate(source = "whitehouse.gov"),
+                        tidy_speeches %>% 
+                          mutate(source = "campaign"))
+
+frequency <- trump_talk %>% 
+  group_by(source) %>% 
+  count(word, sort = TRUE) %>% 
+  left_join(trump_talk %>% 
+              group_by(source) %>% 
+              summarise(total = n())) %>%
+  mutate(freq = n/total)
+
+frequency <- frequency %>% 
+  select(source, word, freq) %>% 
+  spread(source, freq) %>%
+  arrange(whitehouse.gov, campaign)
+
+ggplot(frequency, aes(whitehouse.gov, campaign, color = abs(campaign - whitehouse.gov))) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.25, height = 0.25) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
+  theme(legend.position="none") +
+  labs(x = 'whitehouse.gov', y = 'Campaign speeches')
+
+tidy_speech_bigrams <- speeches %>%
+  unnest_tokens(bigram, text, token = 'ngrams', n = 2) %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(!word1 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
+  filter(!word2 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
+  unite(bigram, word1, word2, sep = ' ')
+
+tidy_speech_trigrams <- speeches %>%
+  unnest_tokens(trigram, text, token = 'ngrams', n = 3) %>%
+  separate(trigram, c("word1", "word2", 'word3'), sep = " ") %>%
+  filter(!word1 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
+  filter(!word2 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
+  filter(!word3 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
+  unite(trigram, word1, word2, word3, sep = ' ')
+
+trump_bigrams <- bind_rows(tidy_trump_bigrams %>% 
+                             mutate(source = "whitehouse.gov"),
+                           tidy_speech_bigrams %>% 
+                             mutate(source = "campaign"))
+
+trump_trigrams <- bind_rows(tidy_trump_trigram %>% 
+                             mutate(source = "whitehouse.gov"),
+                           tidy_speech_trigrams %>% 
+                             mutate(source = "campaign"))
+
+frequency <- trump_bigrams %>% 
+  group_by(source) %>% 
+  count(bigram, sort = TRUE) %>% 
+  left_join(trump_talk %>% 
+              group_by(source) %>% 
+              summarise(total = n())) %>%
+  mutate(freq = n/total)
+
+frequency <- frequency %>% 
+  select(source, bigram, freq) %>% 
+  spread(source, freq) %>%
+  arrange(whitehouse.gov, campaign)
+
+ggplot(frequency, aes(whitehouse.gov, campaign, color = abs(campaign - whitehouse.gov))) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.25, height = 0.25) +
+  geom_text(aes(label = bigram), check_overlap = TRUE, vjust = 1.5) +
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
+  theme(legend.position="none") +
+  labs(x = 'whitehouse.gov', y = 'Campaign speeches')
+
+word_ratios <- trump_talk %>%
+  filter(!str_detect(word, "^@")) %>%
+  count(word, source) %>%
+  filter(sum(n) >= 10) %>%
+  spread(source, n, fill = 0) %>%
+  ungroup() %>%
+  mutate_each(funs((. + 1) / sum(. + 1)), -word) %>%
+  mutate(logratio = log(campaign / whitehouse.gov)) %>%
+  arrange(desc(logratio))
+
+bigram_ratios <- trump_bigrams %>%
+  filter(!str_detect(bigram, "^@")) %>%
+  count(bigram, source) %>%
+  filter(sum(n) >= 10) %>%
+  spread(source, n, fill = 0) %>%
+  ungroup() %>%
+  mutate_each(funs((. + 1) / sum(. + 1)), -bigram) %>%
+  mutate(logratio = log(campaign / whitehouse.gov)) %>%
+  arrange(desc(logratio))
+
+word_ratios %>%
+  group_by(logratio < 0) %>%
+  top_n(15, abs(logratio)) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, logratio)) %>%
+  ggplot(aes(word, logratio, fill = logratio < 0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  ylab("log odds ratio (campaign/whitehouse.gov)") +
+  scale_fill_discrete(name = "", labels = c("campaign", "whitehouse.gov"))
+
+bigram_ratios %>%
+  group_by(logratio < 0) %>%
+  top_n(15, abs(logratio)) %>%
+  ungroup() %>%
+  mutate(bigram = reorder(bigram, logratio)) %>%
+  ggplot(aes(bigram, logratio, fill = logratio < 0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  ylab("log odds ratio (campaign/whitehouse.gov)") +
+  scale_fill_discrete(name = "", labels = c("campaign", "whitehouse.gov"))
+
+trigram_ratios <- trump_trigrams %>%
+  filter(!str_detect(trigram, "^@")) %>%
+  count(trigram, source) %>%
+  filter(sum(n) >= 10) %>%
+  spread(source, n, fill = 0) %>%
+  ungroup() %>%
+  mutate_each(funs((. + 1) / sum(. + 1)), -trigram) %>%
+  mutate(logratio = log(campaign / whitehouse.gov)) %>%
+  arrange(desc(logratio))
+
+trigram_ratios %>%
+  group_by(logratio < 0) %>%
+  top_n(15, abs(logratio)) %>%
+  ungroup() %>%
+  mutate(trigram = reorder(trigram, logratio)) %>%
+  ggplot(aes(trigram, logratio, fill = logratio < 0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  ylab("log odds ratio (campaign/whitehouse.gov)") +
+  scale_fill_discrete(name = "", labels = c("campaign", "whitehouse.gov"))
