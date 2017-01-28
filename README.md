@@ -23,3 +23,7 @@ Finally, run ```python make_the_soup.py``` to convert all of the downloaded html
 ```mine_the_text.R``` is an R script that imports scraped and pre-processed data into R for text mining, analysis, and visualization. Currently it only does basic word, bigram, and trigram counts, and does comparative analysis between the current whitehouse.gov and [an archive of Trump campaign speeches](https://github.com/kshaffer/trump_speeches) (not included in this repository until I investigate their sources/exhaustiveness).
 
 ```trump-20170125.csv``` is an example output, based on a download of whitehouse.gov on January 25, 2017.
+
+```obama-20170120.csv``` is an example output, based on a download of a whitehouse.gov snapshot from right before the inauguration on January 20, 2017.
+
+```visualizations``` contains visualizations produced by the R script from preliminary analyses comparing January 20 and January 25 versions of whitehouse.gov. (Note: work still needs to be done to clean the various headers and sidebars containing site architectural information from the pages in order to better focus on the actual content of each page.)
