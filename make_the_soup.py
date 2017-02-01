@@ -5,12 +5,12 @@ import fnmatch
 from os import listdir
 import csv
 
-source_folder = '../whitehouse.gov-obama-htmlonly/'
-output_file = 'obama-20170120.csv'
+source_folder = '../www.whitehouse.gov-2017-01-31/html/'
+output_file = 'trump-20170131.csv'
 
 corpus = []
 for file in listdir(source_folder):
-    if file not in ['.DS_Store',]:
+    if file not in ['.DS_Store']:
         corpus.append(file)
 
 def writeToCSV(dataToWrite, outputFileName):
