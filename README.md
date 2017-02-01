@@ -26,4 +26,8 @@ Finally, run ```python make_the_soup.py``` to convert all of the downloaded html
 
 ```obama-20170120.csv``` is an example output, based on a download of a whitehouse.gov snapshot from right before the inauguration on January 20, 2017.
 
+## results
+
+```diffs``` contains tables that show page-level changes (additions and deletions) between versions of whitehouse.gov. ```pages_unique_to_obama.csv``` lists pages that were on whitehouse.gov on January 20, 2017, but are no longer on the site. ```pages_new_with_trump.csv``` lists pages that are new to whitehouse.gov since January 20. ```pages_always_on_whitehouse_dot_gov.csv``` lists pages that existed both before and after the change in administration. ```pages_new_or_deleted_on_Jan31.csv``` lists pages that were added or deleted between the January 25 and January 31 versions of whitehouse.gov. *Note: these are page-level changes, not content-level changes. These files only list pages that are new/deleted, not pages that are changed.*
+
 ```visualizations``` contains visualizations produced by the R script from preliminary analyses comparing January 20 and January 25 versions of whitehouse.gov. (Note: work still needs to be done to clean the various headers and sidebars containing site architectural information from the pages in order to better focus on the actual content of each page.)
