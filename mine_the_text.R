@@ -12,7 +12,7 @@ library(lubridate)
 library(readr)
 library(ggplot2)
 
-trump <- read_csv('trump-20170125.csv')
+trump <- read_csv('trump-20170131.csv')
 obama <- read_csv('obama-20170120.csv')
 
 clean_trump_post <- function(text) {
@@ -86,19 +86,19 @@ tidy_obama <- obama %>%
 # most common words
 tidy_trump %>%
   count(word, sort = TRUE) %>%
-  filter(n > 230) %>%
+  filter(n > 650) %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(word, n, fill = word)) +
   geom_bar(stat = 'identity') +
   theme(legend.position="none") +
   xlab('word') +
   ylab('count') +
-  ggtitle('Most common words on whitehouse.gov on January 25, 2017') +
+  ggtitle('Most common words on whitehouse.gov on January 31, 2017') +
   coord_flip()
 
 tidy_obama %>%
   count(word, sort = TRUE) %>%
-  filter(n > 5500) %>%
+  filter(n > 8000) %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(word, n, fill = word)) +
   geom_bar(stat = 'identity') +
@@ -134,26 +134,26 @@ tidy_obama_bigrams <- obama %>%
 # most common bigrams
 tidy_trump_bigrams %>%
   count(bigram, sort = TRUE) %>%
-  filter(n > 100) %>%
+  filter(n > 500) %>%
   mutate(bigram = reorder(bigram, n)) %>%
   ggplot(aes(bigram, n, fill = bigram)) +
   geom_bar(stat = 'identity') +
   theme(legend.position="none") +
   xlab('bigram') +
   ylab('count') +
-  ggtitle('Most common bigrams on whitehouse.gov on January 25, 2017') +
+  ggtitle('Most common bigrams on whitehouse.gov on January 31, 2017') +
   coord_flip()
 
 tidy_obama_bigrams %>%
   count(bigram, sort = TRUE) %>%
-  filter(n > 2800) %>%
+  filter(n > 5300) %>%
   mutate(bigram = reorder(bigram, n)) %>%
   ggplot(aes(bigram, n, fill = bigram)) +
   geom_bar(stat = 'identity') +
   theme(legend.position="none") +
   xlab('bigram') +
   ylab('count') +
-  ggtitle('Most common bigrams on whitehouse.gov on January 25, 2017') +
+  ggtitle('Most common bigrams on whitehouse.gov on January 20, 2017') +
   coord_flip()
 
 trump_bigram_count <- tidy_trump_bigrams %>%
@@ -244,7 +244,7 @@ ggplot(word_frequency,
   scale_y_log10(labels = percent_format()) +
   scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
   theme(legend.position="none") +
-  labs(x = 'Trump\'s whitehouse.gov, Jan 25, 2017', 
+  labs(x = 'Trump\'s whitehouse.gov, Jan 31, 2017', 
        y = 'Obama\'s whitehouse.gov, Jan 20, 2017')
 
 
@@ -275,7 +275,7 @@ ggplot(bigram_frequency,
   scale_y_log10(labels = percent_format()) +
   scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
   theme(legend.position="none") +
-  labs(x = 'Trump\'s whitehouse.gov, Jan 25, 2017', 
+  labs(x = 'Trump\'s whitehouse.gov, Jan 31, 2017', 
        y = 'Obama\'s whitehouse.gov, Jan 20, 2017')
 
 
