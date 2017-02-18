@@ -5,8 +5,8 @@ import fnmatch
 from os import listdir
 import csv
 
-source_folder = '../www.whitehouse.gov-2017-01-31/html/'
-output_file = 'trump-20170131.csv'
+source_folder = '../../scrapes/whitehouse.gov-2017-02-18/html/'
+output_file = 'trump-20180218.csv'
 
 corpus = []
 for file in listdir(source_folder):
@@ -44,10 +44,13 @@ data_to_write = []
 data_to_write.append(['title', 'text'])
 
 for file in corpus:
-    data_to_write.append(articleRow(file))
-    if data_to_write[1] == 'NA':
-        print(file, 'has a content error.')
-    else:
-        print(file, 'successfully added to corpus output.')
+    try:
+        data_to_write.append(articleRow(file))
+        if data_to_write[1] == 'NA':
+            print(file, 'has a content error.')
+        else:
+            print(file, 'successfully added to corpus output.')
+    except:
+        print('Error writing file to corpus output.')
 
 writeToCSV(data_to_write, output_file)
