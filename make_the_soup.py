@@ -5,8 +5,8 @@ import fnmatch
 from os import listdir
 import csv
 
-source_folder = '../../scrapes/whitehouse.gov-2017-02-18/html/'
-output_file = 'trump-20180218.csv'
+source_folder = '../../scrapes/whitehouse.gov-2017-03-01/html/'
+output_file = 'data/trump-20180301.csv'
 
 corpus = []
 for file in listdir(source_folder):
