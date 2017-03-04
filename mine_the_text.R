@@ -1,21 +1,15 @@
-library(dplyr)
 library(tidyverse)
 library(tidytext)
 library(stringr)
 library(scales)
-library(tidyr)
 library(tm)
 library(topicmodels)
-library(broom)
 library(purrr)
 library(lubridate)
 library(readr)
-library(ggplot2)
 
-trump <- read_csv('trump-20170131.csv')
-obama <- read_csv('obama-20170120.csv')
-trump25 <- read_csv('trump-20170125.csv')
-trump31 <- read_csv('trump-20170131.csv')
+trump <- read_csv('data/trump-20170301.csv')
+obama <- read_csv('data/obama-20170120.csv')
 
 # compare lists of page titles
 
@@ -93,14 +87,34 @@ write.csv(universal_pages, 'diffs/pages_always_on_whitehouse_dot_gov.csv', row.n
 write.csv(trump_diffs, 'diffs/pages_new_or_deleted_on_Jan31.csv', row.names = FALSE)
 write.csv(pages_no_trump, 'diffs/pages_unique_to_obama.csv', row.names = FALSE)
 
+# export different versions of Judicial Branch pages
+
+write_file(obama %>% 
+             filter(title == 'The Judicial Branch | whitehouse.gov') %>%
+             select(text) %>%
+             as.character(),
+           'diffs/judicial_branch_Jan20.txt')
+
+write_file(trump31 %>% 
+             filter(title == 'The Judicial Branch | whitehouse.gov') %>%
+             select(text) %>%
+             as.character(),
+           'diffs/judicial_branch_Jan31.txt')
+
 # unnest whitehouse.gov corpora by word, remove stop words
-tidy_trump <- trump %>%
+tidy_trump <- trump31 %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words)
 
 tidy_obama <- obama %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words)
+
+# count a single word
+tidy_obama %>%
+  filter(word == 'women') %>%
+  count(word) %>%
+  mutate(share = n/length(tidy_obama$word))
 
 # most common words
 tidy_trump %>%
@@ -149,6 +163,12 @@ tidy_obama_bigrams <- obama %>%
   filter(!word1 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
   filter(!word2 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
   unite(bigram, word1, word2, sep = ' ')
+
+# count a single bigram
+tidy_obama_bigrams %>%
+  count(bigram) %>%
+  filter(bigram == 'climate change') %>%
+  mutate(share = n/length(tidy_obama_bigrams$bigram))
 
 # most common bigrams
 tidy_trump_bigrams %>%
@@ -342,7 +362,7 @@ word_ratios <- tidy_whitehouse %>%
 bigram_ratios <- tidy_whitehouse_bigrams %>%
   filter(!str_detect(bigram, "^@")) %>%
   count(bigram, source) %>%
-  filter(sum(n) >= 10) %>%
+  filter(sum(n) >= 5) %>%
   spread(source, n, fill = 0) %>%
   ungroup() %>%
   mutate_each(funs((. + 1) / sum(. + 1)), -bigram) %>%
@@ -372,7 +392,7 @@ word_ratios %>%
 
 bigram_ratios %>%
   group_by(logratio < 0) %>%
-  top_n(15, abs(logratio)) %>%
+  top_n(25, abs(logratio)) %>%
   ungroup() %>%
   mutate(bigram = reorder(bigram, logratio)) %>%
   ggplot(aes(bigram, logratio, fill = logratio < 0)) +
