@@ -464,7 +464,9 @@ trigram_ratios %>%
 
 
 # compare filtered bigrams
-search_string <- 'science'
+search_string <- 'college'
+# Interesting searches: terror, islam, radical, student, science, wom, climate,
+# border, isis/isil, migra, school, college
 bigram_ratios %>%
   filter(grepl(search_string, bigram)) %>%
   group_by(obama_trump_ratio < 0) %>%
