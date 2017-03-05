@@ -11,104 +11,28 @@ library(readr)
 trump <- read_csv('data/trump-20170301.csv')
 obama <- read_csv('data/obama-20170120.csv')
 
-# compare lists of page titles
-
-na_to_false <- function(text) {
-  if (is.na(text)) {
-    return(FALSE)
-  } else {
-    return(text)
-  }
-}
-
-page_titles <- obama %>%
-  select(title) %>%
-  mutate(obama = TRUE) %>%
-  full_join(trump25 %>%
-              select(title) %>%
-              mutate(trump25 = TRUE)) %>%
-  full_join(trump31 %>%
-              select(title) %>%
-              mutate(trump31 = TRUE)) %>%
-  unique() %>%
-  mutate(obama = sapply(obama, na_to_false),
-         trump25 = sapply(trump25, na_to_false),
-         trump31 = sapply(trump31, na_to_false))
-
-universal_pages <- page_titles %>%
-  filter(obama == TRUE,
-         trump25 == TRUE,
-         trump31 == TRUE) %>%
-  mutate(page_title = title,
-         obama_Jan20 = obama,
-         trump_Jan25 = trump25,
-         trump_Jan31 = trump31) %>%
-  select(page_title, obama_Jan20, trump_Jan25, trump_Jan31)
-
-pages_no_25 <- page_titles %>%
-  filter(obama == TRUE,
-         trump25 == FALSE,
-         trump31 == TRUE) %>%
-  mutate(page_title = title,
-         obama_Jan20 = obama,
-         trump_Jan25 = trump25,
-         trump_Jan31 = trump31) %>%
-  select(page_title, obama_Jan20, trump_Jan25, trump_Jan31)
-
-pages_no_trump <- page_titles %>%
-  filter(obama == TRUE,
-         trump25 == FALSE,
-         trump31 == FALSE) %>%
-  mutate(page_title = title,
-         obama_Jan20 = obama,
-         trump_Jan25 = trump25,
-         trump_Jan31 = trump31) %>%
-  select(page_title, obama_Jan20, trump_Jan25, trump_Jan31)
-
-trump_diffs <- page_titles %>%
-  filter(trump25 != trump31) %>%
-  mutate(page_title = title,
-         obama_Jan20 = obama,
-         trump_Jan25 = trump25,
-         trump_Jan31 = trump31) %>%
-  select(page_title, obama_Jan20, trump_Jan25, trump_Jan31)
-
-pages_no_obama <- page_titles %>%
-  filter(obama == FALSE,
-         TRUE %in% c(trump25, trump31)) %>%
-  mutate(page_title = title,
-         obama_Jan20 = obama,
-         trump_Jan25 = trump25,
-         trump_Jan31 = trump31) %>%
-  select(page_title, obama_Jan20, trump_Jan25, trump_Jan31)
-
-write.csv(pages_no_obama, 'diffs/pages_new_with_trump.csv', row.names = FALSE)
-write.csv(universal_pages, 'diffs/pages_always_on_whitehouse_dot_gov.csv', row.names = FALSE)
-write.csv(trump_diffs, 'diffs/pages_new_or_deleted_on_Jan31.csv', row.names = FALSE)
-write.csv(pages_no_trump, 'diffs/pages_unique_to_obama.csv', row.names = FALSE)
-
-# export different versions of Judicial Branch pages
-
-write_file(obama %>% 
-             filter(title == 'The Judicial Branch | whitehouse.gov') %>%
-             select(text) %>%
-             as.character(),
-           'diffs/judicial_branch_Jan20.txt')
-
-write_file(trump31 %>% 
-             filter(title == 'The Judicial Branch | whitehouse.gov') %>%
-             select(text) %>%
-             as.character(),
-           'diffs/judicial_branch_Jan31.txt')
+wh_stop_words <- as_tibble(cbind(
+  word = c('topicssupreme', 'penninside', 'participatedigitalfollow', 
+           'outwe', 'officeyour', 'issuespopular', 'eventsstate', 
+           'administrationpeoplepresident', 'videosvideo', 
+           'videosfeatured', 'herehomephotos', 'thoughtswe', 'pennhistory',
+           'participatejoin', 'officespeeches', 'issuestop',
+           'issuesamerica', 'involvedsupport', 'galleryview', 'eventsthe',
+           'administrationthe', 'administrationpresident', 'officesoffice',
+           'moreseniors', 'moredefense', 'issuescivil', 'initiativeslets',
+           'worthycheck', 'photosview', 'performancessee', 'gallerywatch',
+           'eventstune', 'materialbudgetary', 'housewest', 'housepresident')))
 
 # unnest whitehouse.gov corpora by word, remove stop words
-tidy_trump <- trump31 %>%
+tidy_trump <- trump %>%
   unnest_tokens(word, text) %>%
-  anti_join(stop_words)
+  anti_join(stop_words) %>%
+  anti_join(wh_stop_words)
 
 tidy_obama <- obama %>%
   unnest_tokens(word, text) %>%
-  anti_join(stop_words)
+  anti_join(stop_words) %>%
+  anti_join(wh_stop_words)
 
 # count a single word
 tidy_obama %>%
@@ -119,14 +43,14 @@ tidy_obama %>%
 # most common words
 tidy_trump %>%
   count(word, sort = TRUE) %>%
-  filter(n > 650) %>%
+  filter(n > 4000) %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(word, n, fill = word)) +
   geom_bar(stat = 'identity') +
   theme(legend.position="none") +
   xlab('word') +
   ylab('count') +
-  ggtitle('Most common words on whitehouse.gov on January 31, 2017') +
+  ggtitle('Most common words on whitehouse.gov on March 1, 2017') +
   coord_flip()
 
 tidy_obama %>%
@@ -153,15 +77,15 @@ obama_word_count <- tidy_obama %>%
 tidy_trump_bigrams <- trump %>%
   unnest_tokens(bigram, text, token = 'ngrams', n = 2) %>%
   separate(bigram, c("word1", "word2"), sep = " ") %>%
-  filter(!word1 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
-  filter(!word2 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
+  filter(!word1 %in% c(stop_words$word, wh_stop_words$word)) %>%
+  filter(!word2 %in% c(stop_words$word, wh_stop_words$word)) %>%
   unite(bigram, word1, word2, sep = ' ')
 
 tidy_obama_bigrams <- obama %>%
   unnest_tokens(bigram, text, token = 'ngrams', n = 2) %>%
   separate(bigram, c("word1", "word2"), sep = " ") %>%
-  filter(!word1 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
-  filter(!word2 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
+  filter(!word1 %in% c(stop_words$word, wh_stop_words$word)) %>%
+  filter(!word2 %in% c(stop_words$word, wh_stop_words$word)) %>%
   unite(bigram, word1, word2, sep = ' ')
 
 # count a single bigram
@@ -173,14 +97,14 @@ tidy_obama_bigrams %>%
 # most common bigrams
 tidy_trump_bigrams %>%
   count(bigram, sort = TRUE) %>%
-  filter(n > 500) %>%
+  filter(n > 3000) %>%
   mutate(bigram = reorder(bigram, n)) %>%
   ggplot(aes(bigram, n, fill = bigram)) +
   geom_bar(stat = 'identity') +
   theme(legend.position="none") +
   xlab('bigram') +
   ylab('count') +
-  ggtitle('Most common bigrams on whitehouse.gov on January 31, 2017') +
+  ggtitle('Most common bigrams on whitehouse.gov on March 1, 2017') +
   coord_flip()
 
 tidy_obama_bigrams %>%
@@ -207,35 +131,35 @@ obama_bigram_count <- tidy_obama_bigrams %>%
 tidy_trump_trigrams <- trump %>%
   unnest_tokens(trigram, text, token = 'ngrams', n = 3) %>%
   separate(trigram, c("word1", "word2", 'word3'), sep = " ") %>%
-  filter(!word1 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
-  filter(!word2 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
-  filter(!word3 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
+  filter(!word1 %in% c(stop_words$word, wh_stop_words$word)) %>%
+  filter(!word2 %in% c(stop_words$word, wh_stop_words$word)) %>%
+  filter(!word3 %in% c(stop_words$word, wh_stop_words$word)) %>%
   unite(trigram, word1, word2, word3, sep = ' ')
 
 tidy_obama_trigrams <- obama %>%
   unnest_tokens(trigram, text, token = 'ngrams', n = 3) %>%
   separate(trigram, c("word1", "word2", 'word3'), sep = " ") %>%
-  filter(!word1 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
-  filter(!word2 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
-  filter(!word3 %in% c(stop_words$word, 'li', 'ul', 'http', 'htrf')) %>%
+  filter(!word1 %in% c(stop_words$word, wh_stop_words$word)) %>%
+  filter(!word2 %in% c(stop_words$word, wh_stop_words$word)) %>%
+  filter(!word3 %in% c(stop_words$word, wh_stop_words$word)) %>%
   unite(trigram, word1, word2, word3, sep = ' ')
 
 # most common trigrams
 tidy_trump_trigrams %>%
   count(trigram, sort = TRUE) %>%
-  filter(n > 75) %>%
+  filter(n > 3000) %>%
   mutate(trigram = reorder(trigram, n)) %>%
   ggplot(aes(trigram, n, fill = trigram)) +
   geom_bar(stat = 'identity') +
   theme(legend.position="none") +
   xlab('trigram') +
   ylab('count') +
-  ggtitle('Most common trigrams on whitehouse.gov on January 25, 2017') +
+  ggtitle('Most common trigrams on whitehouse.gov on March 1, 2017') +
   coord_flip()
 
 tidy_obama_trigrams %>%
   count(trigram, sort = TRUE) %>%
-  filter(n > 2500) %>%
+  filter(n > 5200) %>%
   mutate(trigram = reorder(trigram, n)) %>%
   ggplot(aes(trigram, n, fill = trigram)) +
   geom_bar(stat = 'identity') +
@@ -283,7 +207,7 @@ ggplot(word_frequency,
   scale_y_log10(labels = percent_format()) +
   scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
   theme(legend.position="none") +
-  labs(x = 'Trump\'s whitehouse.gov, Jan 31, 2017', 
+  labs(x = 'Trump\'s whitehouse.gov,  Mar 1, 2017', 
        y = 'Obama\'s whitehouse.gov, Jan 20, 2017')
 
 
@@ -314,7 +238,7 @@ ggplot(bigram_frequency,
   scale_y_log10(labels = percent_format()) +
   scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
   theme(legend.position="none") +
-  labs(x = 'Trump\'s whitehouse.gov, Jan 31, 2017', 
+  labs(x = 'Trump\'s whitehouse.gov, Mar 1, 2017', 
        y = 'Obama\'s whitehouse.gov, Jan 20, 2017')
 
 
@@ -345,7 +269,7 @@ ggplot(trigram_frequency,
   scale_y_log10(labels = percent_format()) +
   scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
   theme(legend.position="none") +
-  labs(x = 'Trump\'s whitehouse.gov, Jan 25, 2017', 
+  labs(x = 'Trump\'s whitehouse.gov, Mar 1, 2017', 
        y = 'Obama\'s whitehouse.gov, Jan 20, 2017')
 
 
@@ -412,6 +336,224 @@ trigram_ratios %>%
   ylab("log odds ratio (Trump/Obama)") +
   scale_fill_discrete(name = "", labels = c("Trump", "Obama"))
 
+
+# compare corpora
+tidy_presidents <- tidy_trump %>%
+  mutate(president = 'trump') %>%
+  full_join(tidy_obama %>%
+              mutate(president = 'obama')) %>%
+  unique() %>%
+  filter(str_detect(word, "[a-z]"))
+
+frequency <- tidy_presidents %>% 
+  group_by(president) %>% 
+  count(word, sort = TRUE) %>% 
+  left_join(tidy_presidents %>% 
+              group_by(president) %>% 
+              summarise(total = n())) %>%
+  mutate(freq = n/total)
+
+frequency <- frequency %>% 
+  select(president, word, freq) %>% 
+  spread(president, freq) 
+
+word_ratios <- tidy_presidents %>%
+  filter(str_detect(word, "[a-z]")) %>%
+  count(word, president) %>%
+  filter(sum(n) >= 10) %>%
+  spread(president, n, fill = 0) %>%
+  ungroup() %>%
+  mutate_each(funs((. + 1) / sum(. + 1)), -word) %>%
+  mutate(ratio = log(obama/trump)) %>%
+  arrange(desc(ratio))
+
+word_ratios %>%
+  filter(!word %in% c('barack', 'obama', 'donald', 'trump', 'joe', 'jill',
+                      'biden', 'mike', 'karen', 'pence', 'michelle', 'melania')) %>%
+  group_by(ratio < 0) %>%
+  top_n(15, abs(ratio)) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, ratio)) %>%
+  ggplot(aes(word, ratio, fill = ratio < 0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  ylab("Log odds ratio (Obama/Trump)") +
+  ggtitle('Words that most uniquely define the text of an administration\'s whitehouse.gov website') +
+  scale_fill_discrete(name = "", labels = c("Obama", "Trump"))
+
+tidy_president_bigrams <- tidy_trump_bigrams %>%
+  mutate(president = 'trump') %>%
+  full_join(tidy_obama_bigrams %>%
+              mutate(president = 'obama')) %>%
+  unique()
+
+frequency <- tidy_president_bigrams %>% 
+  group_by(president) %>% 
+  count(bigram, sort = TRUE) %>% 
+  left_join(tidy_president_bigrams %>% 
+              group_by(president) %>% 
+              summarise(total = n())) %>%
+  mutate(freq = n/total)
+
+frequency <- frequency %>% 
+  select(president, bigram, freq) %>% 
+  spread(president, freq) 
+
+bigram_ratios <- tidy_president_bigrams %>%
+  filter(str_detect(bigram, "[a-z]")) %>%
+  count(bigram, president) %>%
+  filter(sum(n) >= 10) %>%
+  spread(president, n, fill = 0) %>%
+  ungroup() %>%
+  mutate_each(funs((. + 1) / sum(. + 1)), -bigram) %>%
+  mutate(obama_trump_ratio = log(obama/trump)) %>%
+  arrange(desc(obama_trump_ratio))
+
+bigram_ratios %>%
+  group_by(obama_trump_ratio < 0) %>%
+  top_n(15, abs(obama_trump_ratio)) %>%
+  ungroup() %>%
+  mutate(bigram = reorder(bigram, obama_trump_ratio)) %>%
+  ggplot(aes(bigram, obama_trump_ratio, fill = obama_trump_ratio < 0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  ylab("Log odds ratio (Obama/Trump)") +
+  ggtitle('Bigrams that most uniquely define the text of an administration\'s whitehouse.gov sites') +
+  scale_fill_discrete(name = "", labels = c("Obama", "Trump"))
+
+
+tidy_president_trigrams <- tidy_trump_trigrams %>%
+  mutate(president = 'trump') %>%
+  full_join(tidy_obama_trigrams %>%
+              mutate(president = 'obama')) %>%
+  unique()
+
+frequency <- tidy_president_trigrams %>% 
+  group_by(president) %>% 
+  count(trigram, sort = TRUE) %>% 
+  left_join(tidy_president_trigrams %>% 
+              group_by(president) %>% 
+              summarise(total = n())) %>%
+  mutate(freq = n/total)
+
+frequency <- frequency %>% 
+  select(president, trigram, freq) %>% 
+  spread(president, freq) 
+
+trigram_ratios <- tidy_president_trigrams %>%
+  filter(str_detect(trigram, "[a-z]")) %>%
+  count(trigram, president) %>%
+  filter(sum(n) >= 10) %>%
+  spread(president, n, fill = 0) %>%
+  ungroup() %>%
+  mutate_each(funs((. + 1) / sum(. + 1)), -trigram) %>%
+  mutate(obama_trump_ratio = log(obama/trump)) %>%
+  arrange(desc(obama_trump_ratio))
+
+trigram_ratios %>%
+  group_by(obama_trump_ratio < 0) %>%
+  top_n(15, abs(obama_trump_ratio)) %>%
+  ungroup() %>%
+  mutate(trigram = reorder(trigram, obama_trump_ratio)) %>%
+  ggplot(aes(trigram, obama_trump_ratio, fill = obama_trump_ratio < 0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  ylab("Log odds ratio (Obama/Trump)") +
+  ggtitle('Trigrams that most uniquely define the text of an administration\'s whitehouse.gov sites') +
+  scale_fill_discrete(name = "", labels = c("Obama", "Trump"))
+
+
+# compare filtered bigrams
+search_string <- 'science'
+bigram_ratios %>%
+  filter(grepl(search_string, bigram)) %>%
+  group_by(obama_trump_ratio < 0) %>%
+  ungroup() %>%
+  mutate(bigram = reorder(bigram, obama_trump_ratio)) %>%
+  ggplot(aes(bigram, obama_trump_ratio, fill = obama_trump_ratio < 0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  ylab("Log odds ratio (Obama/Trump)") +
+  ggtitle(paste('Relative frequency of bigrams containing "',
+                search_string,
+                '"',
+                '\non whitehouse.gov (Jan 20 vs. Mar 1)\n',
+                sep = '')) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_fill_discrete(name = "", labels = c("Obama", "Trump"))
+
+
+
+# compare lists of page titles
+
+na_to_false <- function(text) {
+  if (is.na(text)) {
+    return(FALSE)
+  } else {
+    return(text)
+  }
+}
+
+page_titles <- obama %>%
+  select(title) %>%
+  mutate(obama = TRUE) %>%
+  full_join(trump %>%
+              select(title) %>%
+              mutate(trump = TRUE)) %>%
+  unique() %>%
+  mutate(obama = sapply(obama, na_to_false),
+         trump = sapply(trump, na_to_false))
+
+universal_pages <- page_titles %>%
+  filter(obama == TRUE,
+         trump == TRUE) %>%
+  mutate(page_title = title,
+         obama_Jan20 = obama,
+         trump_Mar01 = trump) %>%
+  select(page_title, obama_Jan20, trump_Mar01)
+
+pages_no_trump <- page_titles %>%
+  filter(obama == TRUE,
+         trump == FALSE) %>%
+  mutate(page_title = title,
+         obama_Jan20 = obama,
+         trump_Mar01 = trump) %>%
+  select(page_title, obama_Jan20, trump_Mar01)
+
+# trump_diffs <- page_titles %>%
+#   filter(trump25 != trump31) %>%
+#   mutate(page_title = title,
+#          obama_Jan20 = obama,
+#          trump_Jan25 = trump25,
+#          trump_Jan31 = trump31) %>%
+#   select(page_title, obama_Jan20, trump_Jan25, trump_Jan31)
+# 
+pages_no_obama <- page_titles %>%
+  filter(obama == FALSE,
+         trump == FALSE) %>%
+  mutate(page_title = title,
+         obama_Jan20 = obama,
+         trump_Mar01 = trump) %>%
+  select(page_title, obama_Jan20, trump_Mar01)
+
+write_csv(pages_no_obama, 'diffs/pages_new_with_trump.csv')
+write_csv(universal_pages, 'diffs/pages_always_on_whitehouse_dot_gov.csv')
+# write_csv(trump_diffs, 'diffs/pages_new_or_deleted_on_Jan31.csv')
+write_csv(pages_no_trump, 'diffs/pages_unique_to_obama.csv')
+
+# export different versions of Judicial Branch pages
+
+write_file(obama %>% 
+             filter(title == 'The Judicial Branch | whitehouse.gov') %>%
+             select(text) %>%
+             as.character(),
+           'diffs/judicial_branch_Jan20.txt')
+
+write_file(trump31 %>% 
+             filter(title == 'The Judicial Branch | whitehouse.gov') %>%
+             select(text) %>%
+             as.character(),
+           'diffs/judicial_branch_Jan31.txt')
 
 
 # cleaning headers (posibly)
