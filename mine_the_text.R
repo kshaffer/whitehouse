@@ -464,9 +464,10 @@ trigram_ratios %>%
 
 
 # compare filtered bigrams
-search_string <- 'college'
+search_string <- 'reagan'
 # Interesting searches: terror, islam, radical, student, science, wom, climate,
-# border, isis/isil, migra, school, college
+# border, isis/isil, migra, school, college, natural, nuclear, soviet, africa,
+# reagan, 
 bigram_ratios %>%
   filter(grepl(search_string, bigram)) %>%
   group_by(obama_trump_ratio < 0) %>%
@@ -486,7 +487,7 @@ bigram_ratios %>%
 
 
 
-# compare lists of page titles
+  # compare lists of page titles
 
 na_to_false <- function(text) {
   if (is.na(text)) {
