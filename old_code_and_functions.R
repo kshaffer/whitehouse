@@ -21,7 +21,8 @@ wh_stop_words <- as_tibble(cbind(
            'administrationthe', 'administrationpresident', 'officesoffice',
            'moreseniors', 'moredefense', 'issuescivil', 'initiativeslets',
            'worthycheck', 'photosview', 'performancessee', 'gallerywatch',
-           'eventstune', 'materialbudgetary', 'housewest', 'housepresident')))
+           'eventstune', 'materialbudgetary', 'housewest', 'housepresident',
+           'var', 'padding')))
 
 # unnest whitehouse.gov corpora by word, remove stop words
 tidy_trump <- trump %>%
@@ -208,13 +209,21 @@ ggplot(word_frequency,
   scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
   theme(legend.position="none") +
   labs(x = 'Trump\'s whitehouse.gov,  Mar 1, 2017', 
-       y = 'Obama\'s whitehouse.gov, Jan 20, 2017')
+       y = 'Obama\'s whitehouse.gov, Jan 20, 2017') +
+  ggtitle('Relative frequency of words on Obama\'s and Trump\'s whitehouse.gov')
 
 
 tidy_whitehouse_bigrams <- bind_rows(tidy_trump_bigrams %>% 
                                        mutate(source = "trump"),
                                      tidy_obama_bigrams %>% 
-                                       mutate(source = "obama"))
+                                       mutate(source = "obama")) %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(!word1 %in% c('barack', 'obama', 'donald', 'trump', 'joe', 'jill',
+                       'biden', 'mike', 'karen', 'pence', 'michelle', 'melania')) %>%
+  filter(!word2 %in% c('barack', 'obama', 'donald', 'trump', 'joe', 'jill',
+                       'biden', 'mike', 'karen', 'pence', 'michelle', 'melania')) %>%
+  unite(bigram, word1, word2, sep = ' ')
+
 
 bigram_frequency <- tidy_whitehouse_bigrams %>% 
   group_by(source) %>% 
@@ -239,7 +248,8 @@ ggplot(bigram_frequency,
   scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
   theme(legend.position="none") +
   labs(x = 'Trump\'s whitehouse.gov, Mar 1, 2017', 
-       y = 'Obama\'s whitehouse.gov, Jan 20, 2017')
+       y = 'Obama\'s whitehouse.gov, Jan 20, 2017') +
+  ggtitle('Relative frequency of bigrams on Obama\'s and Trump\'s whitehouse.gov')
 
 
 tidy_whitehouse_trigrams <- bind_rows(tidy_trump_trigrams %>% 
@@ -270,7 +280,8 @@ ggplot(trigram_frequency,
   scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
   theme(legend.position="none") +
   labs(x = 'Trump\'s whitehouse.gov, Mar 1, 2017', 
-       y = 'Obama\'s whitehouse.gov, Jan 20, 2017')
+       y = 'Obama\'s whitehouse.gov, Jan 20, 2017') +
+  ggtitle('Relative frequency of trigrams on Obama\'s and Trump\'s whitehouse.gov')
 
 
 word_ratios <- tidy_whitehouse %>%
@@ -286,7 +297,7 @@ word_ratios <- tidy_whitehouse %>%
 bigram_ratios <- tidy_whitehouse_bigrams %>%
   filter(!str_detect(bigram, "^@")) %>%
   count(bigram, source) %>%
-  filter(sum(n) >= 5) %>%
+  #filter(sum(n) >= 10) %>%
   spread(source, n, fill = 0) %>%
   ungroup() %>%
   mutate_each(funs((. + 1) / sum(. + 1)), -bigram) %>%
@@ -316,7 +327,7 @@ word_ratios %>%
 
 bigram_ratios %>%
   group_by(logratio < 0) %>%
-  top_n(25, abs(logratio)) %>%
+  top_n(15, abs(logratio)) %>%
   ungroup() %>%
   mutate(bigram = reorder(bigram, logratio)) %>%
   ggplot(aes(bigram, logratio, fill = logratio < 0)) +
@@ -342,7 +353,7 @@ tidy_presidents <- tidy_trump %>%
   mutate(president = 'trump') %>%
   full_join(tidy_obama %>%
               mutate(president = 'obama')) %>%
-  unique() %>%
+  #unique() %>%
   filter(str_detect(word, "[a-z]"))
 
 frequency <- tidy_presidents %>% 
@@ -402,7 +413,7 @@ frequency <- frequency %>%
 bigram_ratios <- tidy_president_bigrams %>%
   filter(str_detect(bigram, "[a-z]")) %>%
   count(bigram, president) %>%
-  filter(sum(n) >= 10) %>%
+  #filter(sum(n) >= 5) %>%
   spread(president, n, fill = 0) %>%
   ungroup() %>%
   mutate_each(funs((. + 1) / sum(. + 1)), -bigram) %>%
@@ -463,14 +474,16 @@ trigram_ratios %>%
   scale_fill_discrete(name = "", labels = c("Obama", "Trump"))
 
 
+
 # compare filtered bigrams
-search_string <- 'reagan'
+search_string <- 'science'
 # Interesting searches: terror, islam, radical, student, science, wom, climate,
 # border, isis/isil, migra, school, college, natural, nuclear, soviet, africa,
-# reagan, 
+# reagan, extrem, park, data, technology
 bigram_ratios %>%
   filter(grepl(search_string, bigram)) %>%
   group_by(obama_trump_ratio < 0) %>%
+  top_n(8, abs(obama_trump_ratio)) %>%
   ungroup() %>%
   mutate(bigram = reorder(bigram, obama_trump_ratio)) %>%
   ggplot(aes(bigram, obama_trump_ratio, fill = obama_trump_ratio < 0)) +
@@ -485,9 +498,15 @@ bigram_ratios %>%
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_fill_discrete(name = "", labels = c("Obama", "Trump"))
 
+tidy_president_bigrams %>%
+  filter(grepl(search_string, bigram)) %>%
+  group_by(president) %>%
+  summarize(count = n())
 
+word_ratios %>%
+  filter(grepl(search_string, word))
 
-  # compare lists of page titles
+# compare lists of page titles
 
 na_to_false <- function(text) {
   if (is.na(text)) {
