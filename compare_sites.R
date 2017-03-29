@@ -287,9 +287,12 @@ search_string <- 'migra'
 # border, isis/isil, migra, school, college, soviet, russia, 
 # reagan, extrem
 bigram_ratios_non_hist %>%
-  filter(grepl(search_string, bigram)) %>%
+  filter(grepl(search_string, bigram),
+         !bigram %in% c('immigration action', 'deal immigration', 'security immigration', 'immigration poverty',
+                        'immigration refinancing', 'immigration iran', 'immigration climate', 'immigration rural',
+                        'immigrants ms', 'immigration drug', 'care immigration')) %>%
   group_by(logratio < 0) %>%
-  top_n(8, abs(logratio)) %>%
+  top_n(10, abs(logratio)) %>%
   ungroup() %>%
   mutate(bigram = reorder(bigram, logratio)) %>%
   ggplot(aes(bigram, logratio, fill = logratio < 0)) +
@@ -323,3 +326,11 @@ migra_bigram <- tidy_whitehouse_bigrams_non_hist %>%
   group_by(bigram, administration) %>%
   summarize(count = n()) %>%
   arrange(desc(count))
+
+t <- migra_bigram %>%
+  filter(grepl(search_string, bigram),
+         administration == 'trump') %>%
+  arrange(desc(count)) %>%
+  select(bigram, count)
+
+sum(t$count)
